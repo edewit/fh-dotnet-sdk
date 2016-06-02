@@ -24,7 +24,8 @@ namespace FHSDK.Services
 			base.OnCreate (savedInstanceState);
 			this.Window.RequestFeature (Android.Views.WindowFeatures.NoTitle);
 			this.Window.SetFlags (Android.Views.WindowManagerFlags.ForceNotFullscreen, Android.Views.WindowManagerFlags.ForceNotFullscreen);
-			oauthWebView = new FHOAuthWebview (this, this.Intent.GetBundleExtra ("settings"));
+			//TODO find out how to do dependency injection on android
+            //oauthWebView = new FHOAuthWebview (this, this.Intent.GetBundleExtra ("settings"));
 			oauthWebView.onCreate ();
 			this.SetContentView (oauthWebView.GetView ());
 		}

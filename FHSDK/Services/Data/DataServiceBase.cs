@@ -8,7 +8,13 @@ namespace FHSDK.Services.Data
     /// </summary>
     public abstract class DataServiceBase : IDataService
     {
-        private const string TAG = "FHSDK:DataService";
+        private readonly ILogService _logger;
+        private const string Tag = "FHSDK:DataService";
+
+        public DataServiceBase(ILogService logService)
+        {
+            _logger = logService;
+        }
 
         /// <summary>
         /// Save data to local storage.
@@ -23,11 +29,7 @@ namespace FHSDK.Services.Data
             }
             catch (Exception ex)
             {
-                var logger = ServiceFinder.Resolve<ILogService>();
-                if (null != logger)
-                {
-                    logger.e(TAG, "Failed to save data", ex);
-                }
+                _logger?.e(Tag, "Failed to save data", ex);
             }
         }
 
@@ -45,11 +47,7 @@ namespace FHSDK.Services.Data
             }
             catch (Exception ex)
             {
-                var logger = ServiceFinder.Resolve<ILogService>();
-                if (null != logger)
-                {
-                    logger.e(TAG, "Failed to read data", ex);
-                }
+                _logger?.e(Tag, "Failed to read data", ex);
             }
             return data;
         }

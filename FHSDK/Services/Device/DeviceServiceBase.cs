@@ -11,6 +11,12 @@ namespace FHSDK.Services.Device
 {
     public abstract class DeviceServiceBase : IDeviceService
     {
+        private IIOService _ioService;
+
+        public DeviceServiceBase(IIOService ioService)
+        {
+            _ioService = ioService;
+        }
         public abstract string GetDeviceId();
         public abstract AppProps ReadAppProps();
 
@@ -22,7 +28,7 @@ namespace FHSDK.Services.Device
 
             var appProps = ReadAppProps();
             var configLocation = Path.Combine(GetPackageDir(), configName);
-            var json = ServiceFinder.Resolve<IIOService>().ReadFile(configLocation);
+            var json = _ioService.ReadFile(configLocation);
             var config = (JObject) JsonConvert.DeserializeObject(json);
             var configWindows = config["windows"];
 

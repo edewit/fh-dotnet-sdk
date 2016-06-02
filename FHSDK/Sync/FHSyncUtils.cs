@@ -15,24 +15,26 @@ namespace FHSDK.Sync
     /// </summary>
 	public class FHSyncUtils
 	{
+        private readonly IHashService _hasher;
+
         /// <summary>
         /// Default constructor.
         /// </summary>
-		public FHSyncUtils ()
-		{
-		}
+		public FHSyncUtils (IHashService hashService)
+        {
+            _hasher = hashService;
+        }
 
         /// <summary>
         /// Gnerate SHA1 hash.
         /// </summary>
         /// <param name="pObject"></param>
         /// <returns></returns>
-		public static string GenerateSHA1Hash (object pObject)
+		public string GenerateSHA1Hash (object pObject)
 		{
-			JArray sorted = SortObj (pObject);
-			string strVal = sorted.ToString (Formatting.None);
-			IHashService hasher = ServiceFinder.Resolve<IHashService> ();
-			return hasher.GenerateSha1Hash (strVal);
+			var sorted = SortObj (pObject);
+			var strVal = sorted.ToString (Formatting.None);
+			return _hasher.GenerateSha1Hash (strVal);
 		}
 
         /// <summary>
@@ -73,13 +75,15 @@ namespace FHSDK.Sync
         /// </summary>
         /// <param name="dataId"></param>
         /// <returns></returns>
-		public static string GetDefaultDataDir(string dataId)
-		{
-			IIOService ioService = ServiceFinder.Resolve<IIOService> ();
-			string dirName = "com_feedhenry_sync";
-			string dataDirPath = Path.Combine (ioService.GetDataPersistDir (), dataId, dirName);
-            return dataDirPath;
-		}
+		
+        // TODO move this to another location    
+        //public static string GetDefaultDataDir(string dataId)
+		//{
+		//	IIOService ioService = ServiceFinder.Resolve<IIOService> ();
+		//	string dirName = "com_feedhenry_sync";
+		//	string dataDirPath = Path.Combine (ioService.GetDataPersistDir (), dataId, dirName);
+  //          return dataDirPath;
+		//}
 
         /// <summary>
         /// Get storage path.
@@ -87,11 +91,12 @@ namespace FHSDK.Sync
         /// <param name="dataId"></param>
         /// <param name="dataFileName"></param>
         /// <returns></returns>
-		public static string GetDataFilePath(string dataId, string dataFileName)
-		{
-			string defaultDataDir = GetDefaultDataDir (dataId);
-			return Path.Combine (defaultDataDir, dataFileName);
-		}
+        /// TODO Move to a better location
+		//public static string GetDataFilePath(string dataId, string dataFileName)
+		//{
+		//	string defaultDataDir = GetDefaultDataDir (dataId);
+		//	return Path.Combine (defaultDataDir, dataFileName);
+		//}
 
 		private static JArray SortObj(object pObject)
 		{

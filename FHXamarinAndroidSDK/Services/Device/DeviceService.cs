@@ -23,7 +23,13 @@ namespace FHSDK.Services
         private const string HostProp = "host";
         private const string ConnectionTagProp = "connectiontag";
         private const string ModeProp = "mode";
+        private readonly ILogService _logger;
         private AppProps _appPropsObj;
+
+        public DeviceService(ILogService logService)
+        {
+            _logger = logService;
+        }
 
         public string GetDeviceId()
         {
@@ -35,7 +41,6 @@ namespace FHSDK.Services
             if (null != _appPropsObj) return _appPropsObj;
             var appProps = new Properties();
             Stream input = null;
-            var logger = ServiceFinder.Resolve<ILogService>();
             try
             {
                 bool foundLocalDevProps;
@@ -68,7 +73,7 @@ namespace FHSDK.Services
             }
             catch (Exception ex)
             {
-                logger?.e(Tag, "Failed to load " + AppPropFile, ex);
+                _logger?.e(Tag, "Failed to load " + AppPropFile, ex);
                 return null;
             }
             finally
@@ -91,7 +96,6 @@ namespace FHSDK.Services
         {
             var appProps = new Properties();
             Stream input = null;
-            var logger = ServiceFinder.Resolve<ILogService>();
             try
             {
                 input = Application.Context.Assets.Open(AppPropFile);
@@ -102,7 +106,8 @@ namespace FHSDK.Services
                 var pushVariant = appProps.GetProperty("PUSH_VARIANT");
                 var pushSecret = appProps.GetProperty("PUSH_SECRET");
 
-                if (appProps.GetProperty(HostProp) != null && pushSenderId != null && pushVariant != null && pushSecret != null)
+                if (appProps.GetProperty(HostProp) != null && pushSenderId != null && pushVariant != null &&
+                    pushSecret != null)
                     return new AndroidPushConfig
                     {
                         UnifiedPushUri = new Uri(pushServerUrl),
@@ -113,14 +118,14 @@ namespace FHSDK.Services
                 var ex =
                     new InvalidOperationException(
                         "fhconfig.properties must define PUSH_SERVER_URL, PUSH_SENDER_ID, PUSH_VARIANT, and PUSH_SECRET.  One or more were not defined.");
-                logger.e(Tag,
+                _logger.e(Tag,
                     "fhconfig.properties must define PUSH_SERVER_URL, PUSH_SENDER_ID, PUSH_VARIANT, and PUSH_SECRET.  One or more were not defined.",
                     ex);
                 throw ex;
             }
             catch (Exception ex)
             {
-                logger?.e(Tag, "Failed to load " + AppPropFile, ex);
+                _logger?.e(Tag, "Failed to load " + AppPropFile, ex);
                 return null;
             }
             finally

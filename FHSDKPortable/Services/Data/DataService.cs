@@ -1,4 +1,5 @@
 ﻿using Windows.Storage;
+using FHSDK.Services.Log;
 
 namespace FHSDK.Services.Data
 {
@@ -7,6 +8,10 @@ namespace FHSDK.Services.Data
     /// </summary>
     internal class DataService : DataServiceBase
     {
+        public DataService(ILogService logService) : base(logService)
+        {
+        }
+
         protected override string DoRead(string dataId)
         {
             var settings = ApplicationData.Current.LocalSettings;

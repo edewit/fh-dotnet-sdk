@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using System.Net;
 using System.Runtime.CompilerServices;
 using FHSDK.Services.Data;
+using FHSDK.Services.Hash;
 using FHSDK.Services.Log;
 using FHSDK.Services.Network;
 using Newtonsoft.Json.Linq;
@@ -51,8 +52,10 @@ namespace FHSDK.Sync
         /// <summary>
         /// Should the sync be stopped
         /// </summary>
-        private static ILogService logger = ServiceFinder.Resolve<ILogService>();
-        private static INetworkService networkService = ServiceFinder.Resolve<INetworkService>();
+        private readonly ILogService _logger;
+        private readonly INetworkService _networkService;
+        private readonly IIOService _ioService;
+        private readonly IHashService _hashService;
 
         /// <summary>
         /// The sync configuration
@@ -118,19 +121,26 @@ namespace FHSDK.Sync
         /// <summary>
         /// Constructor.
         /// </summary>
-        public FHSyncDataset()
+        public FHSyncDataset(ILogService logService, INetworkService networkService, IIOService ioService, IHashService hashService)
         {
+            _logger = logService;
+            _networkService = networkService;
+            _ioService = ioService;
+            _hashService = hashService;
         }
 
         /// <summary>
         /// Init a sync dataset with some parameters
         /// </summary>
+        /// <param name="ioService">used to save the data to a local file</param>
         /// <param name="datasetId">Dataset identifier.</param>
         /// <param name="syncConfig">Sync config.</param>
         /// <param name="qp">Query parameters that will be send to the cloud when listing dataset</param>
         /// <param name="meta">Meta data that will be send to the cloud when syncing </param>
+        /// <param name="logger">Used for logging errors and info</param>
+        /// <param name="networkService">used to optain and monitor the network status</param>
         /// <typeparam name="X">The 1st type parameter.</typeparam>
-        public static FHSyncDataset<X> Build<X>(string datasetId, FHSyncConfig syncConfig, IDictionary<string, string> qp, FHSyncMetaData meta) where X : IFHSyncModel
+        public static FHSyncDataset<X> Build<X>(ILogService logger, INetworkService networkService, IIOService ioService, IHashService hashService, string datasetId, FHSyncConfig syncConfig, IDictionary<string, string> qp, FHSyncMetaData meta) where X : IFHSyncModel
         {
             JsonConvert.DefaultSettings = () => new JsonSerializerSettings
             {
@@ -138,28 +148,30 @@ namespace FHSDK.Sync
             };
 
             //check if there is a dataset model file exists and load it
-            string syncClientMeta = FHSyncUtils.GetDataFilePath(datasetId, PERSIST_FILE_NAME);
-            FHSyncDataset<X> dataset = LoadExistingDataSet<X>(syncClientMeta, datasetId);
-            if (null == dataset)
+            var syncClientMeta = FHSyncUtils.GetDataFilePath(datasetId, PERSIST_FILE_NAME);
+            //TODO unit test, unit test and unit test and refactor
+            var dataset = new FHSyncDataset<X>(logger, networkService, ioService, hashService).LoadExistingDataSet<X>(syncClientMeta, datasetId);
+            if (null != dataset) return dataset;
+            //no existing one, create a new one
+            dataset = new FHSyncDataset<X>(logger, networkService, ioService, hashService)
             {
-                //no existing one, create a new one
-                dataset = new FHSyncDataset<X>();
-                dataset.DatasetId = datasetId;
-                dataset.SyncConfig = syncConfig;
-                dataset.QueryParams = null == qp ? new Dictionary<string, string>() : qp;
-                dataset.MetaData = null == meta ? new FHSyncMetaData() : meta;
-                dataset.dataRecords = new InMemoryDataStore<FHSyncDataRecord<X>>
+                DatasetId = datasetId,
+                SyncConfig = syncConfig,
+                QueryParams = qp ?? new Dictionary<string, string>(),
+                MetaData = meta ?? new FHSyncMetaData(),
+                dataRecords = new InMemoryDataStore<FHSyncDataRecord<X>>
                 {
                     PersistPath = GetPersistFilePathForDataset(syncConfig, datasetId, DATA_PERSIST_FILE_NAME)
-                };
-                dataset.pendingRecords = new InMemoryDataStore<FHSyncPendingRecord<X>>
+                },
+                pendingRecords = new InMemoryDataStore<FHSyncPendingRecord<X>>
                 {
-                    PersistPath = GetPersistFilePathForDataset(syncConfig, datasetId, PENDING_DATA_PERSIST_FILE_NAME)
-                };
-                dataset.UidMapping = new Dictionary<string, string>();
-                //persist the dataset immediately
-                dataset.Save();
-            }
+                    PersistPath =
+                        GetPersistFilePathForDataset(syncConfig, datasetId, PENDING_DATA_PERSIST_FILE_NAME)
+                },
+                UidMapping = new Dictionary<string, string>()
+            };
+            //persist the dataset immediately
+            dataset.Save();
             return dataset;
         }
 
@@ -302,7 +314,7 @@ namespace FHSDK.Sync
         /// <returns></returns>
         protected FHSyncPendingRecord<T> AddPendingRecord(string UID, T dataRecords, string action)
         {
-            if (!networkService.IsOnline())
+            if (!_networkService.IsOnline())
             {
                 this.OnSyncNotification(UID, SyncNotification.OfflineUpdate, action);
             }
@@ -452,10 +464,10 @@ namespace FHSDK.Sync
             this.syncRunning = true;
             this.SyncStart = DateTime.Now;
             this.OnSyncNotification(null, SyncNotification.SyncStarted, null);
-            if(networkService.IsOnline()){
+            if(_networkService.IsOnline()){
                 FHSyncLoopParams syncParams = new FHSyncLoopParams(this);
                 if(syncParams.Pendings.Count > 0){
-                    logger.i(LOG_TAG, "starting sync loop - global hash = " + this.HashValue + " :: params = " + syncParams.ToString(), null);
+                    _logger.i(LOG_TAG, "starting sync loop - global hash = " + this.HashValue + " :: params = " + syncParams.ToString(), null);
                 }
                 try {
                     FHResponse syncRes = await DoCloudCall(syncParams);
@@ -938,7 +950,7 @@ namespace FHSDK.Sync
         private void DebugLog(string message, [CallerMemberName] string methodName = "")
         {
             string logMessage = string.Format("{0} - {1}", methodName, message);
-            logger.d(LOG_TAG, logMessage, null);
+            _logger.d(LOG_TAG, logMessage, null);
         }
 
         protected virtual async Task<FHResponse> DoCloudCall(object syncParams)
@@ -977,46 +989,41 @@ namespace FHSDK.Sync
         /// </summary>
         protected void Save()
         {
-            this.dataRecords.Save();
-            this.pendingRecords.Save();
-            string syncClientMeta = FHSyncUtils.GetDataFilePath(this.DatasetId, PERSIST_FILE_NAME);
-            IIOService iosService = ServiceFinder.Resolve<IIOService>();
-            string content = FHSyncUtils.SerializeObject(this);
+            dataRecords.Save();
+            pendingRecords.Save();
+            var syncClientMeta = FHSyncUtils.GetDataFilePath(this.DatasetId, PERSIST_FILE_NAME);
+            var content = FHSyncUtils.SerializeObject(this);
             try
             {
-                iosService.WriteFile(syncClientMeta, content);
+                _ioService.WriteFile(syncClientMeta, content);
             }
             catch (Exception ex)
             {
-                logger.e(LOG_TAG, "Failed to save dataset", ex);
+                _logger.e(LOG_TAG, "Failed to save dataset", ex);
                 throw ex;
             }
 
         }
 
-        private static FHSyncDataset<X> LoadExistingDataSet<X>(string syncClientMetaFile, string datasetId) where X : IFHSyncModel
+        private FHSyncDataset<X> LoadExistingDataSet<X>(string syncClientMetaFile, string datasetId) where X : IFHSyncModel
         {
+            if (!_ioService.Exists(syncClientMetaFile)) return null;
+            var content = _ioService.ReadFile(syncClientMetaFile);
+            if (string.IsNullOrEmpty(content)) return null;
+
             FHSyncDataset<X> result = null;
-            IIOService ioService = ServiceFinder.Resolve<IIOService>();
-            if (ioService.Exists(syncClientMetaFile))
+            try
             {
-                string content = ioService.ReadFile(syncClientMetaFile);
-                if (!string.IsNullOrEmpty(content))
+                var syncDataset = (FHSyncDataset<X>)FHSyncUtils.DeserializeObject(content, typeof(FHSyncDataset<X>));
+                if (null != syncDataset)
                 {
-                    try
-                    {
-                        FHSyncDataset<X> syncDataset = (FHSyncDataset<X>)FHSyncUtils.DeserializeObject(content, typeof(FHSyncDataset<X>));
-                        if (null != syncDataset)
-                        {
-                            result = LoadDataForDataset<X>(syncDataset);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.d(LOG_TAG, "Failed to load existing dataset", ex);
-                        throw ex;
-                    }
+                    result = LoadDataForDataset<X>(syncDataset);
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.d(LOG_TAG, "Failed to load existing dataset", ex);
+                throw;
             }
             return result;
         }

@@ -5,6 +5,7 @@ using Windows.Security.Cryptography;
 using Windows.Security.Cryptography.Core;
 using Windows.Storage;
 using Windows.System.Profile;
+using FHSDK.Services.Data;
 using Newtonsoft.Json;
 
 namespace FHSDK.Services.Device
@@ -14,6 +15,10 @@ namespace FHSDK.Services.Device
     /// </summary>
     internal class DeviceService : DeviceServiceBase
     {
+        public DeviceService(IIOService ioService) : base(ioService)
+        {
+        }
+
         public override string GetDeviceId()
         {
             var token = HardwareIdentification.GetPackageSpecificToken(null);

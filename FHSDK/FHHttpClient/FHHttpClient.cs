@@ -28,17 +28,24 @@ namespace FHSDK.FHHttpClient
     /// </summary>
     public class FHHttpClient
     {
+        private readonly ILogService _logger;
+        private readonly INetworkService _networkService;
         private const int BufferSize = 10*1024;
         private const string LogTag = "FHHttpClient";
+
+        public FHHttpClient(ILogService logger, INetworkService networkService)
+        {
+            _logger = logger;
+            _networkService = networkService;
+        }
 
         /// <summary>
         ///     Check if the device is online
         /// </summary>
         /// <returns></returns>
-        private static async Task<bool> IsOnlineAsync()
+        private async Task<bool> IsOnlineAsync()
         {
-            var networkServiceProvider = ServiceFinder.Resolve<INetworkService>();
-            return await networkServiceProvider.IsOnlineAsync();
+            return await _networkService.IsOnlineAsync();
         }
 
         private static Uri BuildUri(Uri uri, string requestMethod, object requestData)
@@ -100,12 +107,11 @@ namespace FHSDK.FHHttpClient
         /// <param name="requestData">The request data</param>
         /// <param name="timeout">Timeout in milliseconds</param>
         /// <returns>Server response</returns>
-        public static async Task<FHResponse> SendAsync(Uri uri, string requestMethod,
+        public async Task<FHResponse> SendAsync(Uri uri, string requestMethod,
             IDictionary<string, string> headers, object requestData, TimeSpan timeout)
         {
             var timer = new Stopwatch();
 
-            var logger = ServiceFinder.Resolve<ILogService>();
             var online = await IsOnlineAsync();
             FHResponse fhres;
             if (!online)
@@ -120,7 +126,7 @@ namespace FHSDK.FHHttpClient
 
             try
             {
-                logger.d(LogTag, "Send request to " + uri, null);
+                _logger.d(LogTag, "Send request to " + uri, null);
                 httpClient.DefaultRequestHeaders.Add("User-Agent", "FHSDK/DOTNET");
                 httpClient.MaxResponseContentBufferSize = BufferSize;
                 httpClient.Timeout = timeout;
@@ -148,9 +154,9 @@ namespace FHSDK.FHHttpClient
                 timer.Start();
                 var responseMessage = await httpClient.SendAsync(requestMessage, CancellationToken.None);
                 timer.Stop();
-                logger.d(LogTag, "Reqeust Time: " + timer.ElapsedMilliseconds + "ms", null);
+                _logger.d(LogTag, "Reqeust Time: " + timer.ElapsedMilliseconds + "ms", null);
                 var responseStr = await responseMessage.Content.ReadAsStringAsync();
-                logger.d(LogTag, "Response string is " + responseStr, null);
+                _logger.d(LogTag, "Response string is " + responseStr, null);
                 if (responseMessage.IsSuccessStatusCode)
                 {
                     fhres = new FHResponse(responseMessage.StatusCode, responseStr);
@@ -163,13 +169,13 @@ namespace FHSDK.FHHttpClient
             }
             catch (HttpRequestException he)
             {
-                logger.e(LogTag, "HttpRequestException", he);
+                _logger.e(LogTag, "HttpRequestException", he);
                 var fhexception = new FHException("HttpError", FHException.ErrorCode.HttpError, he);
                 fhres = new FHResponse(fhexception);
             }
             catch (Exception e)
             {
-                logger.e(LogTag, "Exception", e);
+                _logger.e(LogTag, "Exception", e);
                 var fhexception = new FHException("UnknownError", FHException.ErrorCode.UnknownError, e);
                 fhres = new FHResponse(fhexception);
             }

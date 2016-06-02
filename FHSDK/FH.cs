@@ -31,6 +31,25 @@ namespace FHSDK
         /// </summary>
         protected static CloudProps CloudProps;
         private static TimeSpan _timeout = TimeSpan.FromSeconds(DefaultTimeout);
+        private ILogService logService;
+        private IPush push;
+        private IDataService dataService;
+
+        private static FH _instance;
+
+        public static FH Instance
+        {
+            get
+            {
+                RequireAppReady();
+                return _instance;
+            }
+
+            protected internal set
+            {
+                _instance = value;
+            }
+        }
 
         /// <summary>
         ///     Get the current version of the FeedHenry .NET SDk
@@ -48,6 +67,13 @@ namespace FHSDK
             private get { return _timeout; }
 
             set { _timeout = value; }
+        }
+
+        public FH(ILogService logService, IPush push, IDataService dataService)
+        {
+            this.logService = logService;
+            this.push = push;
+            this.dataService = dataService;
         }
 
         /// <summary>
@@ -68,8 +94,7 @@ namespace FHSDK
             if (fhconfig.IsLocalDevelopment)
             {
                 AppReady = true;
-                var cloudJson = new JObject();
-                cloudJson["url"] = fhconfig.GetHost();
+                var cloudJson = new JObject {["url"] = fhconfig.GetHost()};
                 CloudProps = new CloudProps(cloudJson);
                 return true;
             }
@@ -82,7 +107,7 @@ namespace FHSDK
             var initValue = resJson["init"];
             if (null != initValue)
             {
-                SaveInitInfo(initValue.ToString());
+                Instance.SaveInitInfo(initValue.ToString());
             }
             return true;
         }
@@ -250,7 +275,7 @@ namespace FHSDK
         ///     you need to add the returnd object as part of the request body with the key "__fh".
         /// </summary>
         /// <returns>The default request parameters</returns>
-        public static IDictionary<string, object> GetDefaultParams()
+        public IDictionary<string, object> GetDefaultParams()
         {
             var defaults = new Dictionary<string, object>();
             var appConfig = FHConfig.GetInstance();
@@ -285,7 +310,7 @@ namespace FHSDK
         ///     you need to add the returned object as HTTP headers to each cloud request.
         /// </summary>
         /// <returns>The default HTTP request headers</returns>
-        public static IDictionary<string, string> GetDefaultParamsAsHeaders()
+        public IDictionary<string, string> GetDefaultParamsAsHeaders()
         {
             var defaultParams = GetDefaultParams();
             IDictionary<string, string> headers = new Dictionary<string, string>();
@@ -309,27 +334,27 @@ namespace FHSDK
         ///     If you want to receive push notifications call this method with a event handler that will receive the notifications
         /// </summary>
         /// <param name="HandleNotification">The andlerl that will receive the notifications</param>
-        public static async void RegisterPush(EventHandler<PushReceivedEvent> HandleNotification)
+        public async void RegisterPush(EventHandler<PushReceivedEvent> HandleNotification)
         {
-            await ServiceFinder.Resolve<IPush>().Register(HandleNotification);
+            await push.Register(HandleNotification);
         }
 
         /// <summary>
         ///     Update the categories used for push notifications
         /// </summary>
         /// <param name="categories">then new categories</param>
-        public static async void SetPushCategories(List<string> categories)
+        public async void SetPushCategories(List<string> categories)
         {
-            await ServiceFinder.Resolve<IPush>().SetCategories(categories);
+            await push.SetCategories(categories);
         }
 
         /// <summary>
         ///     Update the alias used for the push notifications
         /// </summary>
         /// <param name="alias">the alias for this device</param>
-        public static async void SetPushAlias(string alias)
+        public async void SetPushAlias(string alias)
         {
-            await ServiceFinder.Resolve<IPush>().SetAlias(alias);
+            await push.SetAlias(alias);
         }
 
         /// <summary>
@@ -342,9 +367,8 @@ namespace FHSDK
         ///     NONE=Int16.MaxValue
         /// </summary>
         /// <param name="level">One of the options above</param>
-        public static void SetLogLevel(int level)
+        public void SetLogLevel(int level)
         {
-            var logService = ServiceFinder.Resolve<ILogService>();
             logService.SetLogLevel(level);
         }
 
@@ -352,25 +376,18 @@ namespace FHSDK
         ///     Save app init info. Mainly used for analytics.
         /// </summary>
         /// <param name="initInfo"></param>
-        protected static void SaveInitInfo(string initInfo)
+        protected void SaveInitInfo(string initInfo)
         {
-            var dataService = GetDataService();
             dataService.SaveData("init", initInfo);
         }
 
         /// <summary>
         /// </summary>
         /// <returns></returns>
-        protected static JObject GetInitInfo()
+        protected JObject GetInitInfo()
         {
-            var dataService = GetDataService();
             var initValue = dataService.GetData("init");
             return null != initValue ? JObject.Parse(initValue) : null;
-        }
-
-        private static IDataService GetDataService()
-        {
-            return ServiceFinder.Resolve<IDataService>();
         }
 
         private static void RequireAppReady()

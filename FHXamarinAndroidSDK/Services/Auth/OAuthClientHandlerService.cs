@@ -14,22 +14,22 @@ namespace FHSDK.Services
 	public class OAuthClientHandlerService: OAuthClientHandlerServiceBase
 	{
 		private Context appContext;
-		private ILogService logger;
+		private readonly ILogService _logger;
 		private const string LOG_TAG = "XamarinAndroid:OAuthClientHandlerService";
 		protected TaskCompletionSource<OAuthResult> tcs;
 		private OAuthURLRedirectReceiver receiver;
 
-		public OAuthClientHandlerService ()
+		public OAuthClientHandlerService (ILogService logService)
 			:base()
 		{
 			appContext = Application.Context;
 			tcs = new TaskCompletionSource<OAuthResult> ();
-			logger = ServiceFinder.Resolve<ILogService> ();
+		    _logger = logService;
 		}
 
 		public override Task<OAuthResult> Login(string oauthLoginUrl)
 		{
-			logger.d (LOG_TAG, "Got oauth url = " + oauthLoginUrl, null);
+			_logger.d (LOG_TAG, "Got oauth url = " + oauthLoginUrl, null);
 			Bundle data = new Bundle ();
 			data.PutString ("url", oauthLoginUrl);
 			data.PutString ("title", "Login");
@@ -62,7 +62,7 @@ namespace FHSDK.Services
 
 			public override void OnReceive(Context context, Intent intent)
 			{
-				this.parent.logger.d (OAuthClientHandlerService.LOG_TAG, "recieved event, data: " + intent.GetStringExtra ("url"), null);
+				this.parent._logger.d (OAuthClientHandlerService.LOG_TAG, "recieved event, data: " + intent.GetStringExtra ("url"), null);
 				string data = intent.GetStringExtra ("url");
 				if ("NOT_FINISHED".Equals (data)) {
 					OAuthResult oauthResult = new OAuthResult (OAuthResult.ResultCode.Failed, new Exception ("NOT_FINISHED"));

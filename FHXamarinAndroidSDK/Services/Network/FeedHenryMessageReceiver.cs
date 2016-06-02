@@ -12,17 +12,18 @@ namespace FHSDK.Services
 
         public override async void OnMessageReceived(string from, Bundle data)
         {
-            if (!ServiceFinder.IsRegistered<IPush>())
-            {
-                await FHClient.Init();
-                FH.RegisterPush(DefaultHandleEvent);
-            }
+            //TODO make this nicer
+            //if (!ServiceFinder.IsRegistered<IPush>())
+            //{
+            //    await FHClient.Init();
+            //    FH.RegisterPush(DefaultHandleEvent);
+            //}
 
-            var push = ServiceFinder.Resolve<IPush>() as Push;
-            var message = data.GetString("alert");
-            var messageData = data.KeySet().ToDictionary(key => key, key => data.GetString(key));
+            //var push = ServiceFinder.Resolve<IPush>() as Push;
+            //var message = data.GetString("alert");
+            //var messageData = data.KeySet().ToDictionary(key => key, key => data.GetString(key));
 
-            (push.Registration as GcmRegistration).OnPushNotification(message, messageData);
+            //(push.Registration as GcmRegistration).OnPushNotification(message, messageData);
         }
 
         protected abstract void DefaultHandleEvent(object sender, PushReceivedEvent e);

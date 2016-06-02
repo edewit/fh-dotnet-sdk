@@ -116,19 +116,21 @@ namespace FHSDK.Sync
     {
         private const string LogTag = "FHSyncClient";
         private static FHSyncClient _syncClientInstance;
-        private static readonly ILogService Logger = ServiceFinder.Resolve<ILogService>();
         private readonly Dictionary<string, object> _datasets = new Dictionary<string, object>();
 
         private readonly Dictionary<string, DatasetSyncDelegate> _datasetsDelegates =
             new Dictionary<string, DatasetSyncDelegate>();
 
-        private readonly IMonitorService _monitor = ServiceFinder.Resolve<IMonitorService>();
+        private readonly IMonitorService _monitor;
+        private readonly ILogService _logger;
         private readonly int _monitorIntervalInMilliSeconds = 500;
         private FHSyncConfig _globalSyncConfig = new FHSyncConfig();
         private bool _initialised;
 
-        private FHSyncClient()
+        private FHSyncClient(ILogService logService, IMonitorService monitorService)
         {
+            _logger = logService;
+            _monitor = monitorService;
         }
 
         /// <summary>
@@ -192,7 +194,7 @@ namespace FHSDK.Sync
         /// <param name="args">FH sync notification event</param>
         protected virtual void OnSyncNotification(FHSyncNotificationEventArgs args)
         {
-            Logger.d(LogTag, "Receive Notification : " + args, null);
+            _logger.d(LogTag, "Receive Notification : " + args, null);
             EventHandler<FHSyncNotificationEventArgs> handler = null;
             switch (args.Code)
             {
@@ -243,14 +245,15 @@ namespace FHSDK.Sync
         ///     Get the singleton instance of the FHSyncClient
         /// </summary>
         /// <returns>The instance.</returns>
-        public static FHSyncClient GetInstance()
-        {
-            if (null == _syncClientInstance)
-            {
-                _syncClientInstance = new FHSyncClient();
-            }
-            return _syncClientInstance;
-        }
+        /// TODO remove this comment
+        //public static FHSyncClient GetInstance()
+        //{
+        //    if (null == _syncClientInstance)
+        //    {
+        //        _syncClientInstance = new FHSyncClient();
+        //    }
+        //    return _syncClientInstance;
+        //}
 
         /// <summary>
         ///     Set the global FHSyncConfig for all the datasets.

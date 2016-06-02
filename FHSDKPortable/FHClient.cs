@@ -9,6 +9,7 @@ using FHSDK.Services.Hash;
 using FHSDK.Services.Log;
 using FHSDK.Services.Monitor;
 using FHSDK.Services.Network;
+using Microsoft.Practices.Unity;
 
 namespace FHSDK
 {
@@ -56,23 +57,30 @@ namespace FHSDK
     /// <exception cref="FHException"></exception>
     public class FHClient : FH
     {
+        public FHClient(ILogService logService, IPush push, IDataService dataService) : base(logService, push, dataService)
+        {
+        }
+
         public new static async Task<bool> Init()
         {
-            RegisterServices();
+            InitClient();
             return await FH.Init();
         }
 
-        private static void RegisterServices()
+        private new static void InitClient()
         {
-            ServiceFinder.RegisterType<IOAuthClientHandlerService, OAuthClientHandlerService>();
-            ServiceFinder.RegisterType<IDataService, DataService>();
-            ServiceFinder.RegisterType<IIOService, IOService>();
-            ServiceFinder.RegisterType<IDeviceService, DeviceService>();
-            ServiceFinder.RegisterType<IHashService, HashService>();
-            ServiceFinder.RegisterType<ILogService, LogService>();
-            ServiceFinder.RegisterType<IMonitorService, MonitorService>();
-            ServiceFinder.RegisterType<INetworkService, NetworkService>();
-            ServiceFinder.RegisterType<IPush, Push>();
+            var container = new UnityContainer();
+            container.RegisterType<IOAuthClientHandlerService, OAuthClientHandlerService>();
+            container.RegisterType<IDataService, DataService>();
+            container.RegisterType<IIOService, IOService>();
+            container.RegisterType<IDeviceService, DeviceService>();
+            container.RegisterType<IHashService, HashService>();
+            container.RegisterType<ILogService, LogService>();
+            container.RegisterType<IMonitorService, MonitorService>();
+            container.RegisterType<INetworkService, NetworkService>();
+            container.RegisterType<IPush, Push>();
+            container.RegisterType<FH>();
+            Instance = container.Resolve<FH>();
         }
     }
 }

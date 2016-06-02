@@ -1,4 +1,5 @@
 ﻿using System;
+using FHSDK.Services.Hash;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -87,6 +88,12 @@ namespace FHSDK.Sync
         }
 
 		private String hashValue = null;
+        private readonly IHashService _hashService;
+
+        public FHSyncPendingRecord(IHashService hashService)
+        {
+            _hashService = hashService;
+        }
 
         /// <summary>
         /// Get the hash value.
@@ -97,7 +104,7 @@ namespace FHSDK.Sync
 			if(null == hashValue){
 				//keep it consistant with ios/android/js
                 JObject json = AsJObject();
-				hashValue = FHSyncUtils.GenerateSHA1Hash (json);
+				hashValue = new FHSyncUtils(_hashService).GenerateSHA1Hash (json);
 			}
 			return hashValue;
 		}

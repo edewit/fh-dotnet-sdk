@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using FHSDK;
-using FHSDK.Services;
+using FHSDK.Services.Data;
 using FHSDK.Services.Hash;
+using FHSDK.Services.Log;
+using FHSDK.Services.Network;
 using FHSDK.Sync;
 
 namespace tests.Mocks
@@ -71,23 +73,22 @@ namespace tests.Mocks
                ""hash"":""d8a15c0831eb10cb99766f4d976250e3a3a49de3""
             }");
 
-        public MockResponseDataset(string datasetId)
+        public MockResponseDataset(ILogService logService, INetworkService networkService, IIOService ioService, IHashService hashService, string datasetId) : base(logService, networkService, ioService, hashService)
         {
             DatasetId = datasetId;
             SyncConfig = new FHSyncConfig {SyncCloud = FHSyncConfig.SyncCloudType.Mbbas};
             MetaData = new FHSyncMetaData();
             QueryParams = new Dictionary<string, string>();
             UidMapping = new Dictionary<string, string>();
-            dataRecords = new InMemoryDataStore<FHSyncDataRecord<T>>
+            dataRecords = new InMemoryDataStore<FHSyncDataRecord<T>>(logService, ioService)
             {
                 PersistPath = GetPersistFilePathForDataset(SyncConfig, datasetId, DATA_PERSIST_FILE_NAME)
             };
-            pendingRecords = new InMemoryDataStore<FHSyncPendingRecord<T>>
+            pendingRecords = new InMemoryDataStore<FHSyncPendingRecord<T>>(logService, ioService)
             {
                 PersistPath = GetPersistFilePathForDataset(SyncConfig, datasetId, PENDING_DATA_PERSIST_FILE_NAME)
             };
 
-            ServiceFinder.RegisterType<IHashService, TestHasher>();
             Save();
         }
 

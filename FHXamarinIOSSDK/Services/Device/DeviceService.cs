@@ -20,7 +20,12 @@ namespace FHSDK.Services
         private const string LocalDevAppPropsFile = "fhconfiglocal";
         private AppProps _appProps;
         private bool _localDev;
-        private readonly ILogService _logger = ServiceFinder.Resolve<ILogService>();
+        private readonly ILogService _logger;
+
+        public DeviceService(ILogService logService)
+        {
+            _logger = logService;
+        }
 
         public string GetDeviceId()
         {

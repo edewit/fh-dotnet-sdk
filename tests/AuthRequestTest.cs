@@ -26,8 +26,6 @@ namespace tests
 			await FHClient.Init();
 
             //given
-            ServiceFinder.RegisterType<IOAuthClientHandlerService, MockOAuthClient>();
-
             var json = JObject.Parse(@"{
                 ""hosts"": {""host"": ""HOST""}
              }");

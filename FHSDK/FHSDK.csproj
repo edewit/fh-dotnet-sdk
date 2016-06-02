@@ -46,7 +46,6 @@
     <Compile Include="Services\Device\DeviceServiceBase.cs" />
     <Compile Include="Services\Network\IPush.cs" />
     <Compile Include="Services\Network\PushBase.cs" />
-    <Compile Include="Services\ServiceFinder.cs" />
     <Compile Include="FH.cs" />
     <Compile Include="Services\Data\DataServiceBase.cs" />
     <Compile Include="Services\Data\IDataService.cs" />

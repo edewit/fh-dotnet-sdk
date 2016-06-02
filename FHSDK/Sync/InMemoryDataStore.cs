@@ -17,6 +17,8 @@ namespace FHSDK.Sync
 	{
         private ReaderWriterLockSlim cacheLock = new ReaderWriterLockSlim();
         private Dictionary<string, T> memoryStore;
+        private ILogService _logger;
+        private IIOService _ioService;
 
         /// <summary>
         /// Path to file storage.
@@ -26,8 +28,10 @@ namespace FHSDK.Sync
         /// <summary>
         /// Constructor.
         /// </summary>
-		public InMemoryDataStore ()
-		{
+		public InMemoryDataStore (ILogService logService, IIOService ioService)
+        {
+            _logger = logService;
+            _ioService = ioService;
 			memoryStore = new Dictionary<string, T> ();
 		}
 
@@ -117,13 +121,11 @@ namespace FHSDK.Sync
         /// </summary>
 		public void Save()
 		{
-			IIOService ioService = ServiceFinder.Resolve<IIOService> ();
-			ILogService logger = ServiceFinder.Resolve<ILogService> ();
             Monitor.Enter(this);
             try {
-                ioService.WriteFile(this.PersistPath, FHSyncUtils.SerializeObject(memoryStore));
+                _ioService.WriteFile(PersistPath, FHSyncUtils.SerializeObject(memoryStore));
             } catch (Exception ex) {
-                logger.e ("FHSyncClient.InMemoryDataStore", "Failed to save file " + this.PersistPath, ex);
+                _logger.e ("FHSyncClient.InMemoryDataStore", "Failed to save file " + PersistPath, ex);
                 throw;
             } finally {
                 Monitor.Exit(this);
@@ -149,7 +151,7 @@ namespace FHSDK.Sync
         /// <returns></returns>
         public IDataStore<T> Clone()
         {
-            InMemoryDataStore<T> cloned = new InMemoryDataStore<T>();
+            InMemoryDataStore<T> cloned = new InMemoryDataStore<T>(_logger, _ioService);
             cacheLock.EnterReadLock();
             try
             {
@@ -171,22 +173,18 @@ namespace FHSDK.Sync
         /// <typeparam name="X"></typeparam>
         /// <param name="fullFilePath"></param>
         /// <returns></returns>
-		public static InMemoryDataStore<X> Load<X>(string fullFilePath)
+		public InMemoryDataStore<X> Load<X>(string fullFilePath)
 		{
-			InMemoryDataStore<X> dataStore = new InMemoryDataStore<X>();
-			dataStore.PersistPath = fullFilePath;
-			IIOService ioService = ServiceFinder.Resolve<IIOService> ();
-			ILogService logger = ServiceFinder.Resolve<ILogService> ();
-			if (ioService.Exists (fullFilePath)) {
-				try {
-					string fileContent = ioService.ReadFile(fullFilePath);
-					dataStore.memoryStore = (Dictionary<string, X>) FHSyncUtils.DeserializeObject(fileContent, typeof(Dictionary<string, X>));
-				} catch (Exception ex) {
-					logger.e ("FHSyncClient.InMemoryDataStore", "Failed to load file " + fullFilePath, ex);
-					dataStore.memoryStore = new Dictionary<string, X> ();
-				}
-			}
-			return dataStore;
+            var dataStore = new InMemoryDataStore<X>(_logger, _ioService) {PersistPath = fullFilePath};
+            if (!_ioService.Exists(fullFilePath)) return dataStore;
+            try {
+                var fileContent = _ioService.ReadFile(fullFilePath);
+                dataStore.memoryStore = (Dictionary<string, X>) FHSyncUtils.DeserializeObject(fileContent, typeof(Dictionary<string, X>));
+            } catch (Exception ex) {
+                _logger.e ("FHSyncClient.InMemoryDataStore", "Failed to load file " + fullFilePath, ex);
+                dataStore.memoryStore = new Dictionary<string, X> ();
+            }
+            return dataStore;
 		}
 	}
 }

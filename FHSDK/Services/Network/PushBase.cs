@@ -16,15 +16,17 @@ namespace FHSDK.Services.Network
     {
         private const string LogTag = "Push";
         private readonly ILogService _logger;
+        protected readonly IDeviceService _deviceService;
 
-		public Registration Registration { get; private set; }
+        public Registration Registration { get; private set; }
 
         /// <summary>
-        ///     Default constructor.
+        ///     constructor that shows the dependencies
         /// </summary>
-        protected PushBase()
+        public PushBase(ILogService logService, IDeviceService deviceService)
         {
-            _logger = ServiceFinder.Resolve<ILogService>();
+            _logger = logService;
+            _deviceService = deviceService;
         }
 
         /// <summary>
@@ -88,9 +90,9 @@ namespace FHSDK.Services.Network
         ///     In development mode, fhconfig.local.json overrides default config file.
         /// </summary>
         /// <returns>The push config</returns>
-        internal static PushConfig ReadConfig()
+        private PushConfig ReadConfig()
         {
-            return ServiceFinder.Resolve<IDeviceService>().ReadPushConfig();
+            return _deviceService.ReadPushConfig();
         }
 
         /// <summary>

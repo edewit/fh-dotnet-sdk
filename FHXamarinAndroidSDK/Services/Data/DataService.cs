@@ -2,6 +2,7 @@
 using Android.App;
 using FHSDK.Services;
 using FHSDK.Services.Data;
+using FHSDK.Services.Log;
 
 namespace FHSDK.Services
 {
@@ -10,21 +11,21 @@ namespace FHSDK.Services
     /// </summary>
 	public class DataService: DataServiceBase
 	{
-		private const String PREF_ID = "fhprefs";
-		public DataService () : base()
+		private const string PrefId = "fhprefs";
+		public DataService (ILogService logService) : base(logService)
 		{
 		}
 
 		protected override string DoRead(string dataId)
 		{
-			var prefs = Application.Context.GetSharedPreferences (PREF_ID, Android.Content.FileCreationMode.Private);
+			var prefs = Application.Context.GetSharedPreferences (PrefId, Android.Content.FileCreationMode.Private);
 			var value = prefs.GetString (dataId, null);
 			return value;
 		}
 
 		protected override void DoSave(string dataId, string dataValue)
 		{
-			var prefs = Application.Context.GetSharedPreferences (PREF_ID, Android.Content.FileCreationMode.Private);
+			var prefs = Application.Context.GetSharedPreferences (PrefId, Android.Content.FileCreationMode.Private);
 			var prefsEditor = prefs.Edit ();
 			prefsEditor.PutString(dataId, dataValue);
 			prefsEditor.Commit();
@@ -32,7 +33,7 @@ namespace FHSDK.Services
 
 		public override void DeleteData(string dataId)
         {
-            var prefs = Application.Context.GetSharedPreferences (PREF_ID, Android.Content.FileCreationMode.Private);
+            var prefs = Application.Context.GetSharedPreferences (PrefId, Android.Content.FileCreationMode.Private);
             var prefsEditor = prefs.Edit ();
             prefsEditor.Remove(dataId);
             prefsEditor.Commit();

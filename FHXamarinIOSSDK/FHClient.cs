@@ -9,6 +9,7 @@ using FHSDK.Services.Log;
 using FHSDK.Services.Monitor;
 using FHSDK.Services.Network;
 using Foundation;
+using Microsoft.Practices.Unity;
 
 namespace FHSDK
 {
@@ -24,7 +25,11 @@ namespace FHSDK
 
 	public class FHClient: FH
 	{
-        /// <summary>
+	    public FHClient(ILogService logService, IPush push, IDataService dataService) : base(logService, push, dataService)
+	    {
+	    }
+
+	    /// <summary>
         /// Initialise the FeedHenry SDK. This should be called before any other API functions are invoked. Usually this should be called after the app finish intialising.
         /// </summary>
         /// <example>
@@ -57,34 +62,37 @@ namespace FHSDK
         /// <exception cref="FHException"></exception>
 		public new static async Task<bool> Init()
 		{
-			RegisterServices ();
+            InitClient();
 			return await FH.Init ();
 		}
 
-		public static void FinishRegistration(NSData deviceToken)
+	    public static void FinishRegistration(NSData deviceToken)
 		{
 			var notification = NSNotification.FromName("sucess_registered", deviceToken);
 			NSNotificationCenter.DefaultCenter.PostNotification (notification);
 		}
 
-		public static void OnMessageReceived(NSDictionary userInfo) 
+	    public static void OnMessageReceived(NSDictionary userInfo) 
 		{
 			var notification = NSNotification.FromName("message_received", userInfo);
 			NSNotificationCenter.DefaultCenter.PostNotification (notification);
 		}
 
-		private static void RegisterServices()
-		{
-			ServiceFinder.RegisterType<IOAuthClientHandlerService, OAuthClientHandlerService> ();
-			ServiceFinder.RegisterType<IDataService, DataService> ();
-			ServiceFinder.RegisterType<IIOService, IOService> ();
-			ServiceFinder.RegisterType<IDeviceService, DeviceService> ();
-			ServiceFinder.RegisterType<IHashService, HashService> ();
-			ServiceFinder.RegisterType<ILogService, LogService> ();
-			ServiceFinder.RegisterType<IMonitorService, MonitorService> ();
-			ServiceFinder.RegisterType<INetworkService, NetworkService> ();
-			ServiceFinder.RegisterType<IPush, Push> ();
-		}
-	}
+        private new static void InitClient()
+        {
+            var container = new UnityContainer();
+            container.RegisterType<IOAuthClientHandlerService, OAuthClientHandlerService>();
+            container.RegisterType<IDataService, DataService>();
+            container.RegisterType<IIOService, IOService>();
+            container.RegisterType<IDeviceService, DeviceService>();
+            container.RegisterType<IHashService, HashService>();
+            container.RegisterType<ILogService, LogService>();
+            container.RegisterType<IMonitorService, MonitorService>();
+            container.RegisterType<INetworkService, NetworkService>();
+            container.RegisterType<IPush, Push>();
+            container.RegisterType<FHClient>();
+            Instance = container.Resolve<FHClient>();
+        }
+    }
 }
 

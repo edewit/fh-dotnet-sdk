@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FHSDK.Config;
-using FHSDK.Services;
 using FHSDK.Services.Data;
 
 namespace FHSDK.API
@@ -15,29 +14,24 @@ namespace FHSDK.API
         private const string SessionTokenKey = "sessionToken";
         private const string VerifyPath = "box/srv/1.1/admin/authpolicy/verifysession";
         private const string RevokePath = "box/srv/1.1/admin/authpolicy/revokesession";
-        private static readonly FHAuthSession Instance = new FHAuthSession();
         private readonly TimeSpan _timeout = TimeSpan.FromMilliseconds(5*1000);
+        private readonly IDataService _dataService;
+        private FHHttpClient.FHHttpClient _httpClient;
 
-        private FHAuthSession()
+        public FHAuthSession(IDataService dataService, FHHttpClient.FHHttpClient client)
         {
-        }
+            _dataService = dataService;
+            _httpClient = client;
 
-        /// <summary>
-        ///     Get unique instance of FHAuthSession singleton.
-        /// </summary>
-        public static FHAuthSession GetInstance
-        {
-            get { return Instance; }
         }
 
         /// <summary>
         ///     Save the session token
         /// </summary>
         /// <param name="sessionToken"></param>
-        internal static void SaveSession(string sessionToken)
+        internal void SaveSession(string sessionToken)
         {
-            var data = ServiceFinder.Resolve<IDataService>();
-            data.SaveData(SessionTokenKey, sessionToken);
+            _dataService.SaveData(SessionTokenKey, sessionToken);
         }
 
         /// <summary>
@@ -46,8 +40,7 @@ namespace FHSDK.API
         /// <returns></returns>
         public bool Exists()
         {
-            var data = ServiceFinder.Resolve<IDataService>();
-            var saved = data.GetData(SessionTokenKey);
+            var saved = _dataService.GetData(SessionTokenKey);
             return null != saved;
         }
 
@@ -57,8 +50,7 @@ namespace FHSDK.API
         /// <returns></returns>
         public string GetToken()
         {
-            var data = ServiceFinder.Resolve<IDataService>();
-            var saved = data.GetData(SessionTokenKey);
+            var saved = _dataService.GetData(SessionTokenKey);
             return saved;
         }
 
@@ -69,14 +61,11 @@ namespace FHSDK.API
         public async Task<bool> Verify()
         {
             var saved = GetToken();
-            if (null != saved)
-            {
-                var fhres = await CallRemote(VerifyPath, saved);
-                var json = fhres.GetResponseAsJObject();
-                var isValid = (bool) json["isValid"];
-                return isValid;
-            }
-            return false;
+            if (null == saved) return false;
+            var fhres = await CallRemote(VerifyPath, saved);
+            var json = fhres.GetResponseAsJObject();
+            var isValid = (bool) json["isValid"];
+            return isValid;
         }
 
         /// <summary>
@@ -85,11 +74,10 @@ namespace FHSDK.API
         /// <returns></returns>
         public async Task Clear()
         {
-            var dataService = ServiceFinder.Resolve<IDataService>();
             var saved = GetToken();
             if (null != saved)
             {
-                dataService.DeleteData(SessionTokenKey);
+                _dataService.DeleteData(SessionTokenKey);
                 await CallRemote(RevokePath, saved);
             }
         }
@@ -98,7 +86,7 @@ namespace FHSDK.API
         {
             var uri = new Uri(string.Format("{0}/{1}", FHConfig.GetInstance().GetHost(), path));
             var data = new Dictionary<string, object> {{SessionTokenKey, sessionToken}};
-            var fhres = await FHHttpClient.FHHttpClient.SendAsync(uri, "POST", null, data, _timeout);
+            var fhres = await _httpClient.SendAsync(uri, "POST", null, data, _timeout);
             return fhres;
         }
     }

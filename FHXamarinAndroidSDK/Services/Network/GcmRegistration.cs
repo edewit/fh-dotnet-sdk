@@ -13,17 +13,22 @@ namespace FHSDK.Services
     public class GcmRegistration : Registration
     {
         private AndroidPushConfig _config;
-        private Installation _installation;
+        private readonly IDeviceService _deviceService;
+
+        public GcmRegistration(IDeviceService deviceService)
+        {
+            _deviceService = deviceService;
+        }
 
         public override Task<PushConfig> LoadConfigJson(string filename)
         {
-            return Task.Run(() => ServiceFinder.Resolve<IDeviceService>().ReadPushConfig());
+            return Task.Run(() =>_deviceService.ReadPushConfig());
         }
 
         protected override Installation CreateInstallation(PushConfig pushConfig)
         {
             _config = (AndroidPushConfig) pushConfig;
-            return _installation = new Installation
+            return new Installation
             {
                 alias = pushConfig.Alias,
                 categories = pushConfig.Categories,

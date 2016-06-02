@@ -22,7 +22,7 @@ namespace FHSDK.Services
 		protected string finishedUrl = "NOT_FINISHED";
 		protected bool finished = false;
 		protected const string LOG_TAG = "FHOAuthWebview";
-		protected ILogService logger;
+        private readonly ILogService _logger;
 		public const string BROADCAST_ACTION_FILTER = "com.feedhenry.sdk.oauth.urlChanged";
 
         /// <summary>
@@ -30,11 +30,11 @@ namespace FHSDK.Services
         /// </summary>
         /// <param name="aContext">application context</param>
         /// <param name="aSettings">setting</param>
-		public FHOAuthWebview (Activity aContext, Bundle aSettings)
+		public FHOAuthWebview (ILogService logger, Activity aContext, Bundle aSettings)
 		{
-			this.context = aContext;
-			this.webSettings = aSettings;
-			this.logger = ServiceFinder.Resolve<ILogService> ();
+			context = aContext;
+			webSettings = aSettings;
+			_logger = logger;
 		}
 
         /// <summary>
@@ -145,7 +145,7 @@ namespace FHSDK.Services
 
 			public override bool ShouldOverrideUrlLoading(WebView view, string url)
 			{
-				this.parent.logger.d (FHOAuthWebview.LOG_TAG, "going to load url " + url, null);
+				this.parent._logger.d (FHOAuthWebview.LOG_TAG, "going to load url " + url, null);
 				Uri uri = new Uri (url);
 				if (uri.Scheme.Contains ("http")) {
 					return false;
@@ -155,7 +155,7 @@ namespace FHSDK.Services
 
 			public override void OnPageStarted(WebView view, string url, Bitmap favicon)
 			{
-				this.parent.logger.d (FHOAuthWebview.LOG_TAG, "start to load " + url, null);
+				this.parent._logger.d (FHOAuthWebview.LOG_TAG, "start to load " + url, null);
 				Uri uri = new Uri (url);
 				string query = uri.Query;
 				if (query.IndexOf ("status=complete") > -1) {
@@ -166,7 +166,7 @@ namespace FHSDK.Services
 
 			public override void OnPageFinished(WebView view, string url)
 			{
-				this.parent.logger.d (FHOAuthWebview.LOG_TAG, "finish loading " + url, null);
+				this.parent._logger.d (FHOAuthWebview.LOG_TAG, "finish loading " + url, null);
 				if (this.parent.finished && !"about:blank".Equals (url)) {
 					this.parent.close ();
 				}
@@ -174,7 +174,7 @@ namespace FHSDK.Services
 
 			public override void OnReceivedError(WebView view, ClientError errorCode, string description, string failingUrl)
 			{
-				this.parent.logger.d (FHOAuthWebview.LOG_TAG, "error: " + description + " url: " + failingUrl, null);
+				this.parent._logger.d (FHOAuthWebview.LOG_TAG, "error: " + description + " url: " + failingUrl, null);
 			}
 
 

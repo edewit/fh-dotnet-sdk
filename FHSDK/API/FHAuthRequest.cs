@@ -25,11 +25,11 @@ namespace FHSDK.API
         /// <summary>
         /// Constructor
         /// </summary>
-		public FHAuthRequest(CloudProps cloudProps)
+		public FHAuthRequest(IOAuthClientHandlerService oAuthClientHandler, CloudProps cloudProps)
         {
+            _oauthClient = oAuthClientHandler;
             _cloudProps = cloudProps;
-			_oauthClient = ServiceFinder.Resolve<IOAuthClientHandlerService>();
-		}
+        }
 
         /// <summary>
         /// Set the policy id for the request

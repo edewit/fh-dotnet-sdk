@@ -2,6 +2,7 @@
 using System.IO;
 using System.Windows;
 using Windows.ApplicationModel;
+using FHSDK.Services.Data;
 using Microsoft.Phone.Info;
 using Newtonsoft.Json;
 
@@ -12,6 +13,10 @@ namespace FHSDK.Services.Device
     /// </summary>
     internal class DeviceService : DeviceServiceBase
     {
+        public DeviceService(IIOService ioService) : base(ioService)
+        {
+        }
+
         public override string GetDeviceId()
         {
             string retVal = null;
